@@ -23,7 +23,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
     private Sprite personagem, tiro;
     private float posX, posY, velocidade;
-    private float xTiro, yTiro, tiroDirX, tiroDirY;
+    private float xTiro, yTiro, dirX, dirY;
     private boolean ataque;
     private Array<Rectangle> inimigos;
     private long tempoInimigo;
@@ -114,47 +114,35 @@ public class MyGdxGame extends ApplicationAdapter {
     }
 
     private void movimentoTiro() {
-        if(Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !ataque){
-            ataque = true;
-            yTiro = posY;
-        }
-        if(ataque){
-            if(xTiro < Gdx.graphics.getWidth()) {
-                xTiro += 40;
-            }else{
-                xTiro = posX;
-                ataque = false;
-            }
-        }else{
-            xTiro = posX;
-            yTiro = posY;
-        }
-        /*if (Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !ataque) {
-            ataque = true;
-            yTiro = posY;
-        }
         float mouseX = Gdx.input.getX();
         float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !ataque) {
+            ataque = true;
 
-        float dirX = mouseX - xTiro;
-        float dirY = mouseY - yTiro;
+            xTiro = posX;
+            yTiro = posY;
+            
+            float dx = mouseX - posX;
+            float dy = mouseY - posY;
 
-
-        float magnitude = (float) Math.sqrt(dirX * dirX + dirY * dirY);
-        tiroDirX = dirX / magnitude;
-        tiroDirY = dirY / magnitude;
-
+            float magnitude = (float) Math.sqrt(dx * dx + dy * dy);
+            dirX = dx / magnitude;
+            dirY = dy / magnitude;
+        }
 
         if (ataque) {
-            xTiro += tiroDirX * 500 * Gdx.graphics.getDeltaTime();
-            yTiro += tiroDirY * 500 * Gdx.graphics.getDeltaTime();
+            xTiro += dirX * 40;
+            yTiro += dirY * 40;
 
 
-            /*if (xTiro < 0 || xTiro > Gdx.graphics.getWidth() || yTiro < 0 || yTiro > Gdx.graphics.getHeight()) {
+            if (xTiro < 0 || xTiro > Gdx.graphics.getWidth() || yTiro < 0 || yTiro > Gdx.graphics.getHeight()) {
                 ataque = false;
             }
-        }*/
+        } else {
+            xTiro = posX;
+            yTiro = posY;
+        }
     }
 
     private void spawnInimigos() {
