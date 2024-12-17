@@ -34,7 +34,7 @@ public class MyGdxGame extends ApplicationAdapter {
     public void create() {
         batch = new SpriteBatch();
         img = new Texture("bg.png");
-        tPersonagem = new Texture("personagem.png");
+        tPersonagem = new Texture("mago.png");
         personagem = new Sprite(tPersonagem);
         posX = Gdx.graphics.getWidth() / 2 - personagem.getWidth() / 2;
         posY = Gdx.graphics.getHeight() / 2 - personagem.getHeight() / 2;
@@ -46,7 +46,7 @@ public class MyGdxGame extends ApplicationAdapter {
         yTiro = personagem.getHeight() / 2;
         ataque = false;
 
-        tInimigo = new Texture("Dissociado.png");
+        tInimigo = new Texture("Cao-Dissociado.png");
         inimigos = new Array<Rectangle>();
         tempoInimigo = 0;
 
@@ -122,7 +122,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
             xTiro = posX;
             yTiro = posY;
-            
+
             float dx = mouseX - posX;
             float dy = mouseY - posY;
 
