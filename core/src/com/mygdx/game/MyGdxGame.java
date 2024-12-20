@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.Gdx;
 
@@ -15,23 +16,22 @@ import com.badlogic.gdx.utils.TimeUtils;
 
 import java.util.Iterator;
 
-
-//Define os objetos que irá ser utilizados
 public class MyGdxGame extends ApplicationAdapter {
     SpriteBatch batch;
-    Texture img, tPersonagem, tTiro, tInimigo;
-
+    Texture img, tPersonagem, tTiro;
+    private AnimaçãoInimigo orcAnimacao;
+    private Array<OrcInimigo> orcs;
     private Sprite personagem, tiro;
     private float posX, posY, velocidade;
     private float xTiro, yTiro, dirX, dirY;
     private boolean ataque;
-    private Array<Rectangle> inimigos;
     private long tempoInimigo;
     private int score;
 
-    //Atribui valor e cria a instância
     @Override
     public void create() {
+        orcAnimacao = new AnimaçãoInimigo("orc1_walk_full.png", 6, 4, 0.1f);
+
         batch = new SpriteBatch();
         img = new Texture("bg.png");
         tPersonagem = new Texture("mago.png");
@@ -46,17 +46,17 @@ public class MyGdxGame extends ApplicationAdapter {
         yTiro = personagem.getHeight() / 2;
         ataque = false;
 
-        tInimigo = new Texture("Cao-Dissociado.png");
-        inimigos = new Array<Rectangle>();
+        orcs = new Array<>();
         tempoInimigo = 0;
 
         score = 0;
     }
 
-    int imgY = 0;
-
     @Override
     public void render() {
+        float delta = Gdx.graphics.getDeltaTime();
+        orcAnimacao.update(delta);
+
         this.movePersonagem();
         this.movimentoTiro();
         this.movimentoInimigo();
@@ -69,29 +69,104 @@ public class MyGdxGame extends ApplicationAdapter {
             batch.draw(tiro, xTiro + personagem.getWidth() / 2 - 30, yTiro + personagem.getHeight() / 2 - 25);
         }
 
+
         batch.draw(personagem, posX, posY);
 
-        for (Rectangle inimigo : inimigos) {
-            batch.draw(tInimigo, inimigo.x, inimigo.y);
+
+        for (OrcInimigo orc : orcs) {
+            String direcao = determineDirecao(orc);
+            batch.draw(orc.getCurrentFrame(direcao), orc.rect.x, orc.rect.y);
         }
         batch.end();
     }
-
 
     @Override
     public void dispose() {
         batch.dispose();
         img.dispose();
         tPersonagem.dispose();
+        orcAnimacao.dispose();
+    }
+
+    private String determineDirecao(OrcInimigo orc) {
+        if (orc.rect.x < posX) {
+            return "frente";
+        } else if (orc.rect.x > posX) {
+            return "tras";
+        } else if (orc.rect.y < posY) {
+            return "baixo";
+        } else {
+            return "cima";
+        }
+    }
+
+    private void spawnInimigos() {
+
+        Rectangle rect = new Rectangle();
+
+        int lado = MathUtils.random(0, 3);
+
+
+        if (lado == 0) {
+            rect.x = MathUtils.random(0, Gdx.graphics.getWidth() - 64);
+            rect.y = Gdx.graphics.getHeight();
+        }
+        if (lado == 1) {
+            rect.x = Gdx.graphics.getWidth();
+            rect.y = MathUtils.random(0, Gdx.graphics.getHeight() - 64);
+        }
+        if (lado == 2) {
+            rect.x = MathUtils.random(0, Gdx.graphics.getWidth() - 64);
+            rect.y = -64;
+        }
+        if (lado == 3) {
+            rect.x = -64;
+            rect.y = MathUtils.random(0, Gdx.graphics.getHeight() - 64);
+        }
+
+        rect.width = 64;
+        rect.height = 64;
+
+
+        orcs.add(new OrcInimigo(rect, orcAnimacao));
+        tempoInimigo = TimeUtils.nanoTime();
+    }
+
+    private void movimentoInimigo() {
+        if (TimeUtils.nanoTime() - tempoInimigo > 1000000000) {
+            this.spawnInimigos();
+        }
+
+
+        for (Iterator<OrcInimigo> iter = orcs.iterator(); iter.hasNext(); ) {
+            OrcInimigo orc = iter.next();
+
+
+            if (colisao(orc.rect.x, orc.rect.y, 64, 64, xTiro, yTiro, tiro.getWidth(), tiro.getHeight())) {
+                score += 10;
+                ataque = false;
+                iter.remove();
+            }
+
+
+            float dirX = posX - orc.rect.x;
+            float dirY = posY - orc.rect.y;
+            float magnitude = (float) Math.sqrt(dirX * dirX + dirY * dirY);
+            dirX /= magnitude;
+            dirY /= magnitude;
+
+
+            orc.rect.x += dirX * 200 * Gdx.graphics.getDeltaTime();
+            orc.rect.y += dirY * 200 * Gdx.graphics.getDeltaTime();
+        }
+    }
+
+    private boolean colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
+        return x1 + w1 > x2 && x1 < x2 + w2 && y1 + h1 > y2 && y1 < y2 + h2;
     }
 
     private void movePersonagem() {
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            //Limitando para que o personagem nao passe do tamanho da tela
-			/*if(posX < 1280 -140){ // Setando os valores assim não fica dinamico e caso haja uma alteração teria que mudar todos
-				posX += 10;g
-			}*/
-
             if (posX < Gdx.graphics.getWidth() - personagem.getWidth()) {
                 posX += velocidade;
             }
@@ -132,9 +207,8 @@ public class MyGdxGame extends ApplicationAdapter {
         }
 
         if (ataque) {
-            xTiro += dirX * 40;
-            yTiro += dirY * 40;
-
+            xTiro += dirX * 10;
+            yTiro += dirY * 10;
 
             if (xTiro < 0 || xTiro > Gdx.graphics.getWidth() || yTiro < 0 || yTiro > Gdx.graphics.getHeight()) {
                 ataque = false;
@@ -143,82 +217,5 @@ public class MyGdxGame extends ApplicationAdapter {
             xTiro = posX;
             yTiro = posY;
         }
-    }
-
-    private void spawnInimigos() {
-
-        Rectangle inimigo = new Rectangle();
-
-        int lado = MathUtils.random(0, 3);
-
-        if (lado == 0) {//topo
-            inimigo.x = MathUtils.random(0, Gdx.graphics.getWidth() - tInimigo.getWidth());
-            inimigo.y = Gdx.graphics.getHeight();
-        }
-        if (lado == 1) {//direita
-            inimigo.x = Gdx.graphics.getWidth();
-            inimigo.y = MathUtils.random(0, Gdx.graphics.getHeight() - tInimigo.getHeight());
-
-        }
-        if (lado == 2) {//base
-            inimigo.x = MathUtils.random(0, Gdx.graphics.getWidth() - tInimigo.getWidth());
-            inimigo.y = -tInimigo.getHeight();
-        }
-        if (lado == 3) {//esquerda
-            inimigo.x = -tInimigo.getWidth();
-            inimigo.y = MathUtils.random(0, Gdx.graphics.getHeight() - tInimigo.getHeight());
-        }
-
-        inimigo.width = tInimigo.getWidth();
-        inimigo.height = tInimigo.getHeight();
-
-        inimigos.add(inimigo);
-        tempoInimigo = TimeUtils.nanoTime();
-    }
-
-
-    private void movimentoInimigo() {
-        if (TimeUtils.nanoTime() - tempoInimigo > 1000000000) {
-            this.spawnInimigos();
-        }
-
-        for (Iterator<Rectangle> iter = inimigos.iterator(); iter.hasNext(); ) {
-            Rectangle inimigo = iter.next();
-
-            if (colisao(inimigo.x, inimigo.y, inimigo.width, inimigo.height, xTiro, yTiro, tiro.getWidth(), tiro.getHeight())) {
-                score += 10;
-                ataque = false;
-                iter.remove();
-            }
-
-            if (colisao(inimigo.x, inimigo.y, inimigo.width, inimigo.height, posX, posY, personagem.getWidth(), personagem.getHeight())) {
-                //desenvolver vida se tiver, ou a tela de game overd
-                iter.remove();
-            }
-
-            float dirX = posX - inimigo.x;
-            float dirY = posY - inimigo.y;
-
-            float magnitude = (float) Math.sqrt(dirX * dirX + dirY * dirY);
-            dirX /= magnitude;
-            dirY /= magnitude;
-
-
-            inimigo.x += dirX * 200 * Gdx.graphics.getDeltaTime();
-            inimigo.y += dirY * 200 * Gdx.graphics.getDeltaTime();
-
-
-            if (inimigo.x + inimigo.width < 0 || inimigo.x > Gdx.graphics.getWidth() ||
-                    inimigo.y + inimigo.height < 0 || inimigo.y > Gdx.graphics.getHeight()) {
-                iter.remove();
-            }
-        }
-    }
-
-    private boolean colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
-        if (x1 + w1 > x2 && x1 < x2 + w2 && y1 + h1 > y2 && y1 < y2 + h2) {
-            return true;
-        }
-        return false;
     }
 }
