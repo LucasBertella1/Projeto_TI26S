@@ -13,20 +13,35 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 
 import java.util.Iterator;
 
 public class MyGdxGame extends ApplicationAdapter {
     SpriteBatch batch;
-    Texture img, tPersonagem, tTiro;
+    Texture img, tPersonagem, tTiro, tEspecial, tBoss;
     private AnimaçãoInimigo orcAnimacao;
     private Array<OrcInimigo> orcs;
-    private Sprite personagem, tiro;
+    private Sprite personagem, tiro, especial, boss;
     private float posX, posY, velocidade;
-    private float xTiro, yTiro, dirX, dirY;
-    private boolean ataque;
+    private float xTiro, yTiro, dirX, dirY, xEspecial, yEspecial;
+    private boolean ataque, spawnBoss;
     private long tempoInimigo;
-    private int score;
+    private int score, inimigosMortos, scoreEspecial;
+    private Sound somTiro, somEspecial, somMatarInimigo;
+    private Music musicaFundo, bossMusic;
+    private OrthographicCamera camera;
+
+
+    private Rectangle bossRect;
+    private int bossVida;
+
+    /*Especial*/
+    private boolean especialVisivel;
+    private boolean especialDisponivel;
+    private boolean ataqueEspecial;
 
     @Override
     public void create() {
@@ -35,7 +50,13 @@ public class MyGdxGame extends ApplicationAdapter {
         batch = new SpriteBatch();
         img = new Texture("bg.png");
         tPersonagem = new Texture("mago.png");
+        tEspecial = new Texture("especial.png");
+        tBoss = new Texture("Dissociado.png");
+
         personagem = new Sprite(tPersonagem);
+        especial = new Sprite(tEspecial);
+        boss = new Sprite(tBoss);
+
         posX = Gdx.graphics.getWidth() / 2 - personagem.getWidth() / 2;
         posY = Gdx.graphics.getHeight() / 2 - personagem.getHeight() / 2;
         velocidade = 10;
@@ -50,6 +71,26 @@ public class MyGdxGame extends ApplicationAdapter {
         tempoInimigo = 0;
 
         score = 0;
+        inimigosMortos = 0;
+
+        especialVisivel = false;
+        especialDisponivel = false;
+        ataqueEspecial = false;
+        scoreEspecial = MathUtils.random(5, 10);
+
+        musicaFundo = Gdx.audio.newMusic(Gdx.files.internal("musicafundo.mp3"));
+        musicaFundo.setLooping(true);
+        musicaFundo.setVolume(0.5f);
+        musicaFundo.play();
+
+        bossMusic = Gdx.audio.newMusic(Gdx.files.internal("musicaBoss.mp3"));
+
+        somTiro = Gdx.audio.newSound(Gdx.files.internal("soundTiro.mp3"));
+        somEspecial = Gdx.audio.newSound(Gdx.files.internal("soundEspecial.mp3"));
+        somMatarInimigo = Gdx.audio.newSound(Gdx.files.internal("som_matar_inimigo.mp3"));
+
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
     @Override
@@ -60,6 +101,12 @@ public class MyGdxGame extends ApplicationAdapter {
         this.movePersonagem();
         this.movimentoTiro();
         this.movimentoInimigo();
+        this.verificaEspecial();
+        this.movimentoEspecial();
+        this.bossFinal();
+
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
 
         ScreenUtils.clear(1, 0, 0, 1);
 
@@ -69,14 +116,25 @@ public class MyGdxGame extends ApplicationAdapter {
             batch.draw(tiro, xTiro + personagem.getWidth() / 2 - 30, yTiro + personagem.getHeight() / 2 - 25);
         }
 
-
         batch.draw(personagem, posX, posY);
-
 
         for (OrcInimigo orc : orcs) {
             String direcao = determineDirecao(orc);
             batch.draw(orc.getCurrentFrame(direcao), orc.rect.x, orc.rect.y);
         }
+
+        if (especialVisivel) {
+            batch.draw(especial, xEspecial, yEspecial);
+        }
+
+        if (ataqueEspecial) {
+            batch.draw(especial, xEspecial, yEspecial);
+        }
+
+        if (spawnBoss) {
+            batch.draw(boss, bossRect.x, bossRect.y);
+        }
+
         batch.end();
     }
 
@@ -86,6 +144,55 @@ public class MyGdxGame extends ApplicationAdapter {
         img.dispose();
         tPersonagem.dispose();
         orcAnimacao.dispose();
+        tBoss.dispose();
+
+        musicaFundo.dispose();
+        bossMusic.dispose();
+
+        somTiro.dispose();
+        somEspecial.dispose();
+        somMatarInimigo.dispose();
+    }
+
+    private void bossFinal() {
+        if (!spawnBoss && inimigosMortos >= 3) {
+            spawnBoss = true;
+            musicaFundo.stop();
+            bossMusic.setLooping(true);
+            bossMusic.play();
+
+            bossRect = new Rectangle(Gdx.graphics.getWidth() / 2 - boss.getWidth() / 2, Gdx.graphics.getHeight() - boss.getHeight(), boss.getWidth(), boss.getHeight());
+            bossVida = 20;
+
+            camera.zoom = 1.5f;
+            Gdx.app.postRunnable(() -> {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                camera.zoom = 1f;
+            });
+        }
+
+        if (spawnBoss) {
+            bossRect.y -= 100 * Gdx.graphics.getDeltaTime();
+            if (bossRect.y < Gdx.graphics.getHeight() / 2) {
+                bossRect.y = Gdx.graphics.getHeight() / 2;
+            }
+
+            if (colisao(bossRect.x, bossRect.y, bossRect.width, bossRect.height, xTiro, yTiro, tiro.getWidth(), tiro.getHeight())) {
+                bossVida--;
+                ataque = false;
+
+                if (bossVida <= 0) {
+                    spawnBoss = false;
+                    bossMusic.stop();
+                    musicaFundo.play();
+                    score += 100;
+                }
+            }
+        }
     }
 
     private String determineDirecao(OrcInimigo orc) {
@@ -128,7 +235,20 @@ public class MyGdxGame extends ApplicationAdapter {
         rect.height = 64;
 
 
-        orcs.add(new OrcInimigo(rect, orcAnimacao));
+        int vida;
+        if (inimigosMortos >= 100) {
+            vida = 5;
+        } else if (inimigosMortos >= 75) {
+            vida = 4;
+        } else if (inimigosMortos >= 50) {
+            vida = 3;
+        } else if (inimigosMortos >= 25) {
+            vida = 2;
+        } else {
+            vida = 1;
+        }
+
+        orcs.add(new OrcInimigo(rect, orcAnimacao, vida));
         tempoInimigo = TimeUtils.nanoTime();
     }
 
@@ -137,17 +257,28 @@ public class MyGdxGame extends ApplicationAdapter {
             this.spawnInimigos();
         }
 
-
         for (Iterator<OrcInimigo> iter = orcs.iterator(); iter.hasNext(); ) {
             OrcInimigo orc = iter.next();
-
-
             if (colisao(orc.rect.x, orc.rect.y, 64, 64, xTiro, yTiro, tiro.getWidth(), tiro.getHeight())) {
-                score += 10;
-                ataque = false;
-                iter.remove();
-            }
+                if (ataqueEspecial) {
+                    orc.vida -= 2;
+                } else {
+                    orc.vida--;
+                }
 
+                ataque = false;
+
+                if (orc.vida <= 0) {
+                    //somMatarInimigo.play();
+                    score += 10;
+                    inimigosMortos++;
+                    iter.remove();
+                }
+
+                if (inimigosMortos >= scoreEspecial) {
+                    spawnEspecial();
+                }
+            }
 
             float dirX = posX - orc.rect.x;
             float dirY = posY - orc.rect.y;
@@ -155,11 +286,11 @@ public class MyGdxGame extends ApplicationAdapter {
             dirX /= magnitude;
             dirY /= magnitude;
 
-
             orc.rect.x += dirX * 200 * Gdx.graphics.getDeltaTime();
             orc.rect.y += dirY * 200 * Gdx.graphics.getDeltaTime();
         }
     }
+
 
     private boolean colisao(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
         return x1 + w1 > x2 && x1 < x2 + w2 && y1 + h1 > y2 && y1 < y2 + h2;
@@ -195,6 +326,8 @@ public class MyGdxGame extends ApplicationAdapter {
         if (Gdx.input.isButtonPressed(Input.Buttons.LEFT) && !ataque) {
             ataque = true;
 
+            somTiro.play();
+
             xTiro = posX;
             yTiro = posY;
 
@@ -216,6 +349,69 @@ public class MyGdxGame extends ApplicationAdapter {
         } else {
             xTiro = posX;
             yTiro = posY;
+        }
+    }
+
+    private void verificaEspecial() {
+
+        if (especialVisivel && colisao(xEspecial, yEspecial, especial.getWidth(), especial.getHeight(), posX, posY, personagem.getWidth(), personagem.getHeight())) {
+            especialVisivel = false;
+            especialDisponivel = true;
+        }
+
+        if (especialDisponivel && Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+            ataqueEspecial = true;
+            especialDisponivel = false;
+
+            somEspecial.play();
+
+            xEspecial = posX + personagem.getWidth() / 2 - especial.getWidth() / 2;
+            yEspecial = posY + personagem.getHeight() / 2 - especial.getHeight() / 2;
+
+            float mouseX = Gdx.input.getX();
+            float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
+
+            float dx = mouseX - xEspecial;
+            float dy = mouseY - yEspecial;
+
+            float magnitude = (float) Math.sqrt(dx * dx + dy * dy);
+            dirX = dx / magnitude;
+            dirY = dy / magnitude;
+        }
+    }
+
+    private void spawnEspecial() {
+        xEspecial = MathUtils.random(0, Gdx.graphics.getWidth() - especial.getWidth());
+        yEspecial = MathUtils.random(0, Gdx.graphics.getHeight() - especial.getHeight());
+        especialVisivel = true;
+
+        scoreEspecial += MathUtils.random(5, 10);
+    }
+
+    private void movimentoEspecial() {
+        if (ataqueEspecial) {
+            xEspecial += dirX * 15;
+            yEspecial += dirY * 15;
+
+
+            if (xEspecial < 0 || xEspecial > Gdx.graphics.getWidth() || yEspecial < 0 || yEspecial > Gdx.graphics.getHeight()) {
+                ataqueEspecial = false;
+            }
+
+
+            for (Iterator<OrcInimigo> iter = orcs.iterator(); iter.hasNext(); ) {
+                OrcInimigo orc = iter.next();
+                if (colisao(orc.rect.x, orc.rect.y, 64, 64, xEspecial, yEspecial, especial.getWidth(), especial.getHeight())) {
+                    orc.vida -= 2;
+                    if (orc.vida <= 0) {
+                        score += 10;
+                        inimigosMortos++;
+                        iter.remove();
+                    }
+                    ataqueEspecial = false;
+                    break;
+                }
+            }
         }
     }
 }
