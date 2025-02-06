@@ -5,10 +5,10 @@ import com.badlogic.gdx.math.Rectangle;
 
 public class OrcInimigo {
     public Rectangle rect;
-    private AnimaçãoInimigo animacao;
+    private AnimacaoMovimento animacao;
     public int vida;
 
-    public OrcInimigo(Rectangle rect, AnimaçãoInimigo animacao, int vida) {
+    public OrcInimigo(Rectangle rect, AnimacaoMovimento animacao, int vida) {
         this.rect = rect;
         this.animacao = animacao;
         this.vida = vida;

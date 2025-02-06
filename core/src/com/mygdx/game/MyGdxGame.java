@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.Gdx;
 
@@ -22,7 +21,7 @@ import java.util.Iterator;
 public class MyGdxGame extends ApplicationAdapter {
     SpriteBatch batch;
     Texture img, tPersonagem, tTiro, tEspecial, tBoss;
-    private AnimaçãoInimigo orcAnimacao;
+    private AnimacaoMovimento orcAnimacao;
     private Array<OrcInimigo> orcs;
     private Sprite personagem, tiro, especial, boss;
     private float posX, posY, velocidade;
@@ -45,7 +44,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
     @Override
     public void create() {
-        orcAnimacao = new AnimaçãoInimigo("orc1_walk_full.png", 6, 4, 0.1f);
+        orcAnimacao = new AnimacaoMovimento("orc1_walk_full.png", 6, 4, 0.1f);
 
         batch = new SpriteBatch();
         img = new Texture("bg.png");

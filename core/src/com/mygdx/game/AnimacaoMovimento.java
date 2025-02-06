@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.Animation;
 
-public class AnimaçãoInimigo {
+public class AnimacaoMovimento {
 
     private Texture texture;
     private TextureRegion[][] frames;
@@ -14,7 +14,7 @@ public class AnimaçãoInimigo {
     private Animation<TextureRegion> andarfrente;
     private float stateTime;
 
-    public AnimaçãoInimigo(String sprite, int colunas, int linhas, float duracaoFrame) {
+    public AnimacaoMovimento(String sprite, int colunas, int linhas, float duracaoFrame) {
         texture = new Texture(sprite);
         frames = new TextureRegion[linhas][colunas];
 
