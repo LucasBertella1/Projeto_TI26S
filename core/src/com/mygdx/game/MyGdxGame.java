@@ -86,7 +86,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
         somTiro = Gdx.audio.newSound(Gdx.files.internal("soundTiro.mp3"));
         somEspecial = Gdx.audio.newSound(Gdx.files.internal("soundEspecial.mp3"));
-        somMatarInimigo = Gdx.audio.newSound(Gdx.files.internal("som_matar_inimigo.mp3"));
+        //somMatarInimigo = Gdx.audio.newSound(Gdx.files.internal("som_matar_inimigo.mp3"));
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -150,7 +150,7 @@ public class MyGdxGame extends ApplicationAdapter {
 
         somTiro.dispose();
         somEspecial.dispose();
-        somMatarInimigo.dispose();
+        //somMatarInimigo.dispose();
     }
 
     private void bossFinal() {
